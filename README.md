@@ -1,6 +1,6 @@
 # Advanced Inventory Management System
 
-A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, security logs, supplier management, controlled product categories, procurement/receiving workflows, customers and sales orders.
+A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, security logs, supplier management, controlled product categories, procurement/receiving workflows, customers, sales orders and actionable inventory alerts.
 
 ## Core features
 
@@ -10,7 +10,7 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 - Authentication event logging for login attempts, OTP sent/resent, verification and logout
 - Product CRUD with SKU, controlled category, cost/selling price, images, stock and reorder levels
 - Stock-in / stock-out operations with an auditable stock movement ledger
-- Low-stock indicators
+- Low-stock indicators and persisted manager/admin inventory alerts
 - Supplier directory with search, contacts, tax number, status, notes and archive workflow
 - First-class category directory with active/archive workflow and product relationships
 - Purchase orders with suppliers, line items, costs, expected dates and status lifecycle
@@ -18,11 +18,18 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 - Customer directory and customer records for sales
 - Sales orders with line items, stock validation, atomic stock deduction and order numbers
 - Payment and delivery status tracking
+- In-app inventory alert center with unread count, read and mark-all-read actions
 - Administrator, manager and staff roles
 - Administrator-only user management with role/status/password editing
 - Cream, charcoal and bronze visual theme replacing the reference blue interface
 - Laravel migrations and PHPUnit feature tests
 - GitHub Actions CI with SQLite database initialization and migration before tests
+
+## Alert architecture
+
+Inventory alerts are generated when a product is at or below its reorder level after creation, editing, stock-in or stock-out operations. Alerts are persisted per administrator/manager so important inventory conditions are not lost when a session ends. Users can see an unread count in the application header, open the alert center, mark individual alerts read, or mark all alerts read.
+
+The alert layer is intentionally separate from email delivery. This gives the application a reliable in-app notification source first; email/SMS/push delivery can be attached later without coupling notification transport to inventory transactions.
 
 ## Procurement architecture
 
@@ -30,7 +37,7 @@ Purchase orders sit between suppliers and inventory. A manager creates a draft o
 
 ## Sales architecture
 
-Sales orders connect customers to inventory. A manager creates an order with one or more products. The service validates stock while holding the selected product rows for update, deducts the sold quantity inside the same database transaction, creates order line items, and records a `STOCK_OUT` movement. This prevents an order from being created while inventory remains unchanged or from silently selling more stock than is available.
+Sales orders connect customers to inventory. A manager creates an order with one or more products. The system validates stock while holding the selected product rows for update, deducts the sold quantity inside the same database transaction, creates order line items, and records a `STOCK_OUT` movement. This prevents an order from being created while inventory remains unchanged or from silently selling more stock than is available.
 
 Orders also track payment state (`unpaid`, `partial`, `paid`, `refunded`) and delivery state (`pending`, `processing`, `shipped`, `delivered`, `cancelled`). Payment processing itself is intentionally not coupled to the order engine yet; a dedicated payment layer will be added later.
 
@@ -103,7 +110,6 @@ The default `.env.example` uses Laravel's `log` mailer so local development does
 - Added incremental goods receiving with remaining-quantity validation.
 - Connected receiving to the existing stock movement ledger so inventory changes remain auditable.
 - Added manager-only procurement routes and UI.
-- Added feature tests for order creation and stock-receipt behavior.
 
 ### Phase — Customers and sales orders
 
@@ -113,8 +119,15 @@ The default `.env.example` uses Laravel's `log` mailer so local development does
 - Added `STOCK_OUT` ledger entries for every sold quantity.
 - Added payment and delivery status management.
 - Added sales order detail and status views.
-- Added customer and sales navigation.
 - Deliberately kept payment processing separate from order creation for a future dedicated payment layer.
+
+### Phase — Inventory alerts
+
+- Added persisted `inventory_alerts` records per manager/administrator.
+- Added low-stock alert generation after product and stock changes.
+- Added unread alert counts to the authenticated application header.
+- Added alert center with pagination and read/mark-all-read actions.
+- Kept notification storage separate from email transport for clean future expansion.
 
 ## Build notes
 
@@ -122,9 +135,9 @@ The reference repository was used as a functional baseline for authentication, p
 
 ## Roadmap
 
-- Delivery/status notifications beyond authentication
 - Richer reporting and inventory valuation
 - Barcode support
 - Returns and refunds workflow
+- Email/SMS/push delivery notifications
 - Payment gateway integration
 - Production deployment hardening and green CI
