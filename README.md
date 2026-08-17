@@ -1,8 +1,8 @@
 # Advanced Inventory Management System
 
-A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, security logs, suppliers, categories, procurement/receiving, customers, sales orders, inventory alerts, reporting/valuation, returns/refunds and barcode support.
+A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, suppliers, categories, procurement/receiving, customers, sales orders, inventory alerts, reporting/valuation, returns/refunds, barcode support and a gateway-ready payment layer.
 
-## Core features
+## Functional scope completed before hardening
 
 - Laravel 12 / PHP 8.2+
 - Mandatory email OTP after every password sign-in
@@ -16,6 +16,7 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 - Customer records and sales orders
 - Atomic stock deduction for sales
 - Payment and delivery status tracking
+- Transaction-safe payment records with provider/method/reference fields
 - Returns/refunds workflow that restores returned stock
 - Inventory alert centre with unread/read state
 - Management reporting and inventory valuation
@@ -23,25 +24,24 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 - Administrator, manager and staff roles
 - Administrator user management
 - Cream, charcoal and bronze visual theme
-- PHPUnit tests and GitHub Actions CI
+- PHPUnit feature coverage for core business rules
+- GitHub Actions CI workflow
 
-## Valuation model
+## Reporting and valuation
 
-Reports distinguish three management values:
-
-- **Cost value:** current stock multiplied by product cost price.
-- **Retail value:** current stock multiplied by selling price.
-- **Potential gross margin:** retail value minus cost value.
-
-The reporting layer also shows low/out-of-stock counts, sales totals, purchase totals, stock movement summaries and valuation by category.
+Reports distinguish cost value, retail value and potential gross margin, and summarize low/out-of-stock products, sales, purchases, stock movements and valuation by category.
 
 ## Returns and refunds
 
-Returns are tied to sales orders and order items. The system validates that returned quantities do not exceed the quantity originally sold less previous returns. Processing occurs inside a database transaction, restores returned quantities to stock and records a `RETURN` stock movement. Refund status remains explicit so future payment-gateway processing can be attached without changing inventory accounting.
+Returns are tied to sales orders and order items. The system validates remaining returnable quantities, restores returned goods inside a transaction and records a `RETURN` stock movement. Refund status is explicit and is ready to be connected to the payment layer.
 
 ## Barcode support
 
-Products now have an optional unique barcode in addition to SKU. The product create/edit forms accept barcodes and the inventory search can match product name, SKU or barcode. This provides the data layer needed for USB/Bluetooth scanner workflows without tying the application to a specific scanner vendor.
+Products have an optional unique barcode in addition to SKU. Product creation/editing accepts barcodes and inventory search matches product name, SKU or barcode. This provides the data layer required for USB/Bluetooth scanner workflows without tying the application to one hardware vendor.
+
+## Payment layer
+
+The application now has a transaction-safe payment record and `PaymentService`. It records provider, method, reference, amount, status and payment time, prevents overpayment, and automatically updates an order from `unpaid` to `partial` or `paid`. The current provider is intentionally manual/gateway-ready; real provider credentials and webhook contracts belong in the final deployment configuration rather than source code.
 
 ## Authentication flow
 
@@ -116,9 +116,17 @@ For real OTP email delivery, configure SMTP values in `.env`. Never commit `.env
 - Added unique product barcode and barcode-aware search.
 - Added barcode inputs to product creation/editing.
 
-## Build order
+### Phase — Payment foundation
 
-All functional phases are being executed before the final hardening/polishing pass. The final pass will address CI, regression tests, UX consistency, validation edge cases, database indexing, performance, deployment configuration, documentation and production security.
+- Added payment records linked to sales orders.
+- Added transaction-safe payment service.
+- Added partial/full payment state updates.
+- Added manager payment recording endpoint.
+- Kept provider credentials and external webhook configuration out of source code.
+
+## Next stage: hardening and polish
+
+All planned functional modules have now been laid down. The next pass is deliberately **not new feature invention**. It is verification and production hardening: make CI green, run the complete regression suite, fix migration/database edge cases, tighten authorization and validation, improve UX consistency, add indexes and pagination where needed, review transactions/concurrency, configure notification transports, document deployment, and perform the final security/performance audit.
 
 ## Reference
 
