@@ -23,19 +23,20 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, sqlite3, pdo_sqlite
           coverage: none
-          tools: composer:v2
+          tools: composer
 
       - name: Validate Composer configuration
         run: composer validate --no-check-publish
 
       - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress 2>&1 | tee composer-install.log
+        run: composer install --no-interaction --prefer-dist --no-progress --no-scripts 2>&1 | tee composer-install.log
 
       - name: Prepare environment
         run: |
           cp .env.example .env
           touch database/database.sqlite
           php artisan key:generate --force
+          php artisan package:discover --ansi
 
       - name: Lint PHP source
         run: |
