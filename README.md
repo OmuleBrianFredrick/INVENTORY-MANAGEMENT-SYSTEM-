@@ -1,6 +1,6 @@
 # Advanced Inventory Management System
 
-A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, security logs and supplier management.
+A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, security logs, supplier management and controlled product categories.
 
 ## Core features
 
@@ -8,15 +8,22 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 - Email + password sign-in followed by a mandatory six-digit email OTP
 - OTP hashing, expiry, one-time verification, attempt limits and resend cooldown
 - Authentication event logging for login attempts, OTP sent/resent, verification and logout
-- Product CRUD with SKU, category, cost/selling price, images, stock and reorder levels
+- Product CRUD with SKU, controlled category, cost/selling price, images, stock and reorder levels
 - Stock-in / stock-out operations with an auditable stock movement ledger
 - Low-stock indicators
 - Supplier directory with search, contacts, tax number, status, notes and archive workflow
+- First-class category directory with active/archive workflow and product relationships
 - Administrator, manager and staff roles
 - Administrator-only user management with role/status/password editing
 - Cream, charcoal and bronze visual theme replacing the reference blue interface
 - Laravel migrations and PHPUnit feature tests
 - GitHub Actions CI with SQLite database initialization and migration before tests
+
+## Category architecture
+
+Products now reference a normalized `categories` table through `products.category_id`. The legacy `products.category` text field remains populated with the selected category name so existing data and reporting do not break during the transition.
+
+Default categories are seeded for a fresh installation: General, Electronics, Home & Office, Fashion, and Food & Beverage. Managers can create and archive categories from the Categories directory.
 
 ## Authentication flow
 
@@ -31,7 +38,7 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 ## Roles
 
 - **Administrator**: full inventory and user-management access.
-- **Manager**: product, stock and supplier-management access.
+- **Manager**: product, stock, supplier and category-management access.
 - **Staff**: authenticated platform access without management privileges by default.
 
 The first account registered in a fresh database is provisioned as administrator. For deterministic deployments, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` and run the database seeder.
@@ -62,13 +69,24 @@ The default `.env.example` uses Laravel's `log` mailer so local development does
 - Use a real SMTP provider for production email delivery.
 - Rotate administrator credentials before deployment.
 
+## Implementation log
+
+### Phase — First-class categories
+
+- Added `categories` migration with unique names, descriptions, active status and soft deletion.
+- Added `Category` model and product relationship.
+- Added manager-only category directory, creation and archive workflow.
+- Added `products.category_id` foreign key while preserving the legacy category name.
+- Changed product create/edit flows to require an active controlled category.
+- Added default category seeding for fresh databases.
+- Updated sidebar navigation and this README.
+
 ## Build notes
 
 The reference repository was used as a functional baseline for authentication, product management, images, stock operations and Laravel project conventions. This repository deliberately improves the weak points identified during the review instead of copying them unchanged.
 
 ## Roadmap
 
-- Categories as first-class entities
 - Purchase orders and receiving
 - Sales/orders and customer accounts
 - Delivery/status notifications beyond authentication
