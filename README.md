@@ -38,7 +38,7 @@ The repository contains a complete **`.env.example` template**. It includes:
 - first-install administrator placeholders
 - mock payment/SMS integration placeholders
 
-No real secrets are committed. `.env` is explicitly ignored by Git. fileciteturn113file0
+No real secrets are committed. `.env` is explicitly ignored by Git.
 
 ### Example XAMPP configuration
 
@@ -111,7 +111,7 @@ Products have an optional unique barcode in addition to SKU. Product creation/ed
 
 ## Payment layer
 
-The application has a transaction-safe payment record and `PaymentService`. It records provider, method, reference, amount, status and payment time, prevents overpayment, and automatically updates an order from `unpaid` to `partial` or `paid`. The current provider is intentionally manual/gateway-ready; real provider credentials and webhook contracts belong in final deployment configuration rather than source code.
+The application has a transaction-safe payment record and `PaymentService`. It records provider, method, reference, amount, status and payment time, prevents overpayment, serializes concurrent payment updates per order, and automatically updates an order from `unpaid` to `partial` or `paid`. The current provider is intentionally manual/gateway-ready; real provider credentials and webhook contracts belong in final deployment configuration rather than source code.
 
 ## Authentication flow
 
@@ -124,6 +124,8 @@ The application has a transaction-safe payment record and `PaymentService`. It r
 5. The authentication event is logged.
 6. The user must enter the OTP before Laravel authenticates the manager session.
 
+Manager login attempts are also rate-limited by email/IP.
+
 ### Ordinary staff
 
 1. User submits email and password.
@@ -135,6 +137,24 @@ The application has a transaction-safe payment record and `PaymentService`. It r
 - **Administrator:** full platform and user-management access.
 - **Manager:** inventory, suppliers, categories, procurement and sales-management access.
 - **Staff:** authenticated platform access without management privileges by default.
+
+Administrator management also prevents the last active administrator from being removed and prevents an administrator from accidentally removing their own administrator access.
+
+## Security hardening
+
+- Baseline security response headers: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and HSTS on HTTPS responses.
+- Login brute-force throttling through Laravel's rate limiter.
+- OTP remains hashed and time-limited.
+- Manager-only OTP enforcement is covered by feature tests.
+- CSRF protection remains provided by Laravel's web middleware.
+- Real credentials remain outside Git via `.env` and `.gitignore`.
+- Payment updates use row locking to prevent concurrent overpayment races.
+
+## CI and automated verification
+
+GitHub Actions uses SQLite independently of the local XAMPP/MySQL configuration. The pipeline validates Composer configuration, installs dependencies, lints PHP source, boots the application, runs migrations, verifies routes, executes PHPUnit and uploads diagnostic logs as an artifact even when a job fails.
+
+This separation is intentional: **CI validates the repository; your local XAMPP environment validates MySQL integration.**
 
 ## Implementation log
 
@@ -156,6 +176,7 @@ The application has a transaction-safe payment record and `PaymentService`. It r
 - Added sales orders and order items.
 - Added atomic stock deduction and `STOCK_OUT` ledger entries.
 - Added payment and delivery states.
+- Fixed the sales-order item form so users add only the products they actually intend to sell.
 
 ### Phase — Inventory alerts
 
@@ -184,6 +205,7 @@ The application has a transaction-safe payment record and `PaymentService`. It r
 - Added transaction-safe payment service.
 - Added partial/full payment state updates.
 - Added manager payment recording endpoint.
+- Added row locking for concurrent payment safety.
 - Kept provider credentials and external webhook configuration out of source code.
 
 ### Phase — Hardening and UI polish
@@ -191,12 +213,17 @@ The application has a transaction-safe payment record and `PaymentService`. It r
 - Added deterministic XAMPP/MySQL environment template.
 - Added mock SMTP/payment/SMS placeholders without committing secrets.
 - Added stricter CI diagnostics and PHPUnit configuration.
+- Removed an obsolete Composer CLI option from CI.
+- Added PHP source linting, route verification and failure diagnostics artifacts.
 - Restricted OTP to managers/administrators according to the application security requirement.
+- Added login throttling and administrator-continuity protections.
+- Added baseline HTTP security headers.
 - Improved responsive cream UI, keyboard focus states, mobile layouts, tables and action controls.
+- Added security regression tests.
 
-## Next stage: hardening and polish
+## Repository-side completion boundary
 
-The remaining work is deliberately **not local database creation**. Local migration into XAMPP, database credentials and real external provider credentials are deployment/integration steps for the developer machine. Repository-side work continues with verification and production hardening: make CI green, run the complete regression suite, fix migration/database edge cases, tighten authorization and validation, add indexes and pagination where needed, review transactions/concurrency, configure notification transports, document deployment, and perform the final security/performance audit.
+The repository-side implementation includes the application code, models, controllers, routes, migrations, tests, CI, UI and configuration templates. **Local XAMPP database creation/migration, real SMTP credentials, real payment credentials, real SMS credentials and local machine integration remain intentionally outside this repository-side execution boundary.**
 
 ## Reference
 
