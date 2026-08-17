@@ -5,7 +5,7 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 ## Functional scope completed before hardening
 
 - Laravel 12 / PHP 8.2+
-- Mandatory email OTP after every password sign-in
+- Mandatory email OTP for inventory managers/administrators after password validation; ordinary staff use password authentication without OTP
 - OTP hashing, expiry, one-time verification, attempt limits and resend cooldown
 - Authentication event logging
 - Product CRUD with SKU, barcode, category, cost/selling price, images, stock and reorder levels
@@ -27,6 +27,76 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 - PHPUnit feature coverage for core business rules
 - GitHub Actions CI workflow
 
+## Environment configuration
+
+The repository contains a complete **`.env.example` template**. It includes:
+
+- XAMPP/MySQL connection placeholders
+- local application settings
+- mock SMTP configuration for OTP email
+- OTP security settings
+- first-install administrator placeholders
+- mock payment/SMS integration placeholders
+
+No real secrets are committed. `.env` is explicitly ignored by Git. fileciteturn113file0
+
+### Example XAMPP configuration
+
+The intended local database configuration is:
+
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=inventory_management_system
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+Adjust `DB_USERNAME` and `DB_PASSWORD` if your XAMPP/MySQL installation uses different credentials.
+
+### Example SMTP configuration
+
+`.env.example` contains deliberately fake SMTP values such as `smtp.example.com`. These are **configuration placeholders, not working credentials**. Replace them locally with your SMTP provider's host, port, username, password and encryption settings before testing real OTP delivery.
+
+For a development environment where you do not want to configure SMTP yet, use:
+
+```env
+MAIL_MAILER=log
+```
+
+Laravel will write outgoing mail to the application log instead of attempting delivery.
+
+## Local XAMPP setup
+
+After cloning the repository:
+
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan storage:link
+```
+
+Then create a MySQL database in XAMPP/phpMyAdmin named `inventory_management_system` (or use another name and update `DB_DATABASE`).
+
+**Database migration is intentionally a local integration step.** Run:
+
+```bash
+php artisan migrate --seed
+```
+
+The repository already contains the complete migration definitions for the application tables; the command above creates those tables in your local XAMPP database.
+
+Then run:
+
+```bash
+php artisan test
+php artisan serve
+```
+
+If you are using the XAMPP Apache/PHP stack instead of `php artisan serve`, point the web server at the Laravel application's `public` directory and keep the same `.env` database configuration.
+
 ## Reporting and valuation
 
 Reports distinguish cost value, retail value and potential gross margin, and summarize low/out-of-stock products, sales, purchases, stock movements and valuation by category.
@@ -41,32 +111,24 @@ Products have an optional unique barcode in addition to SKU. Product creation/ed
 
 ## Payment layer
 
-The application now has a transaction-safe payment record and `PaymentService`. It records provider, method, reference, amount, status and payment time, prevents overpayment, and automatically updates an order from `unpaid` to `partial` or `paid`. The current provider is intentionally manual/gateway-ready; real provider credentials and webhook contracts belong in the final deployment configuration rather than source code.
+The application has a transaction-safe payment record and `PaymentService`. It records provider, method, reference, amount, status and payment time, prevents overpayment, and automatically updates an order from `unpaid` to `partial` or `paid`. The current provider is intentionally manual/gateway-ready; real provider credentials and webhook contracts belong in final deployment configuration rather than source code.
 
 ## Authentication flow
+
+### Manager / administrator
 
 1. User submits email and password.
 2. Credentials and account status are validated.
 3. A six-digit OTP is generated and stored only as a hash.
 4. The OTP is emailed to the registered address.
 5. The authentication event is logged.
-6. The user must enter the OTP before Laravel authenticates the session.
+6. The user must enter the OTP before Laravel authenticates the manager session.
 
-## Local setup
+### Ordinary staff
 
-```bash
-composer install
-cp .env.example .env
-php artisan key:generate
-mkdir -p database
-touch database/database.sqlite
-php artisan migrate --seed
-php artisan storage:link
-php artisan test
-php artisan serve
-```
-
-For real OTP email delivery, configure SMTP values in `.env`. Never commit `.env` or production credentials.
+1. User submits email and password.
+2. Credentials and account status are validated.
+3. The user is authenticated directly without a manager OTP challenge.
 
 ## Roles
 
@@ -124,9 +186,17 @@ For real OTP email delivery, configure SMTP values in `.env`. Never commit `.env
 - Added manager payment recording endpoint.
 - Kept provider credentials and external webhook configuration out of source code.
 
+### Phase — Hardening and UI polish
+
+- Added deterministic XAMPP/MySQL environment template.
+- Added mock SMTP/payment/SMS placeholders without committing secrets.
+- Added stricter CI diagnostics and PHPUnit configuration.
+- Restricted OTP to managers/administrators according to the application security requirement.
+- Improved responsive cream UI, keyboard focus states, mobile layouts, tables and action controls.
+
 ## Next stage: hardening and polish
 
-All planned functional modules have now been laid down. The next pass is deliberately **not new feature invention**. It is verification and production hardening: make CI green, run the complete regression suite, fix migration/database edge cases, tighten authorization and validation, improve UX consistency, add indexes and pagination where needed, review transactions/concurrency, configure notification transports, document deployment, and perform the final security/performance audit.
+The remaining work is deliberately **not local database creation**. Local migration into XAMPP, database credentials and real external provider credentials are deployment/integration steps for the developer machine. Repository-side work continues with verification and production hardening: make CI green, run the complete regression suite, fix migration/database edge cases, tighten authorization and validation, add indexes and pagination where needed, review transactions/concurrency, configure notification transports, document deployment, and perform the final security/performance audit.
 
 ## Reference
 
