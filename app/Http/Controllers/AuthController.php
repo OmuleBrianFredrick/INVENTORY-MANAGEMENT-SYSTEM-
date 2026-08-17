@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AuthController extends Controller
 {
@@ -17,12 +18,21 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $data=$request->validate(['email'=>['required','email'],'password'=>['required']]);
+        $data['email']=strtolower(trim($data['email']));
+        $key='login:'.$data['email'].'|'.$request->ip();
+        if(RateLimiter::tooManyAttempts($key,5)){
+            $seconds=RateLimiter::availableIn($key);
+            return back()->withErrors(['email'=>'Too many sign-in attempts. Please try again in '.ceil($seconds/60).' minute(s).'])->onlyInput('email');
+        }
         $user=User::where('email',$data['email'])->first();
         if(!$user||!Hash::check($data['password'],$user->password)){
-            AuthenticationLog::create(['email'=>$data['email'],'event'=>'LOGIN_ATTEMPT','status'=>'FAILED','ip_address'=>$request->ip(),'user_agent'=>$request->userAgent(),'details'=>'Invalid credentials']);
+            RateLimiter::hit($key,60);
+            if($user)AuthenticationLog::create(['user_id'=>$user->id,'email'=>$user->email,'event'=>'LOGIN_ATTEMPT','status'=>'FAILED','ip_address'=>$request->ip(),'user_agent'=>$request->userAgent(),'details'=>'Invalid credentials']);
+            else AuthenticationLog::create(['email'=>$data['email'],'event'=>'LOGIN_ATTEMPT','status'=>'FAILED','ip_address'=>$request->ip(),'user_agent'=>$request->userAgent(),'details'=>'Invalid credentials']);
             return back()->withErrors(['email'=>'The provided credentials do not match our records.'])->onlyInput('email');
         }
-        if(!$user->is_active){return back()->withErrors(['email'=>'This account is inactive. Contact an administrator.'])->onlyInput('email');}
+        RateLimiter::clear($key);
+        if(!$user->is_active)return back()->withErrors(['email'=>'This account is inactive. Contact an administrator.'])->onlyInput('email');
 
         // OTP is restricted to inventory managers/admins. Ordinary staff authenticate with password only.
         if(!$user->isManager()){
@@ -77,6 +87,6 @@ class AuthController extends Controller
     }
 
     public function showRegistrationForm(){return view('auth.register');}
-    public function register(Request $request){$request->validate(['name'=>['required','string','max:255'],'email'=>['required','email','max:255','unique:users,email'],'password'=>['required','string','min:8','confirmed']]);$role=User::count()===0?'admin':'staff';User::create(['name'=>$request->name,'email'=>$request->email,'password'=>Hash::make($request->password),'role'=>$role,'is_active'=>true]);return redirect()->route('login')->with('success','Account created. Sign in to continue.');}
+    public function register(Request $request){$request->validate(['name'=>['required','string','max:255'],'email'=>['required','email','max:255','unique:users,email'],'password'=>['required','string','min:8','confirmed']]);$role=User::count()===0?'admin':'staff';User::create(['name'=>$request->name,'email'=>strtolower(trim($request->email)),'password'=>Hash::make($request->password),'role'=>$role,'is_active'=>true]);return redirect()->route('login')->with('success','Account created. Sign in to continue.');}
     public function logout(Request $request){$user=Auth::user();if($user)AuthenticationLog::create(['user_id'=>$user->id,'email'=>$user->email,'event'=>'LOGOUT','status'=>'SUCCESS','ip_address'=>$request->ip(),'user_agent'=>$request->userAgent(),'details'=>'User logged out']);Auth::logout();$request->session()->invalidate();$request->session()->regenerateToken();return redirect()->route('login');}
 }
