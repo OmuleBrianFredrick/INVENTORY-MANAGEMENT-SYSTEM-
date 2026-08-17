@@ -1,6 +1,6 @@
 # Advanced Inventory Management System
 
-A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements and security logs.
+A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, security logs and supplier management.
 
 ## Core features
 
@@ -11,10 +11,12 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 - Product CRUD with SKU, category, cost/selling price, images, stock and reorder levels
 - Stock-in / stock-out operations with an auditable stock movement ledger
 - Low-stock indicators
+- Supplier directory with search, contacts, tax number, status, notes and archive workflow
 - Administrator, manager and staff roles
 - Administrator-only user management with role/status/password editing
 - Cream, charcoal and bronze visual theme replacing the reference blue interface
 - Laravel migrations and PHPUnit feature tests
+- GitHub Actions CI with SQLite database initialization and migration before tests
 
 ## Authentication flow
 
@@ -29,7 +31,7 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 ## Roles
 
 - **Administrator**: full inventory and user-management access.
-- **Manager**: product and stock-management access.
+- **Manager**: product, stock and supplier-management access.
 - **Staff**: authenticated platform access without management privileges by default.
 
 The first account registered in a fresh database is provisioned as administrator. For deterministic deployments, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` and run the database seeder.
@@ -66,4 +68,10 @@ The reference repository was used as a functional baseline for authentication, p
 
 ## Roadmap
 
-Next improvements can include supplier management, categories as first-class entities, purchase orders, sales/orders, notifications beyond authentication, richer reporting, barcode support, pagination/search and CI/CD.
+- Categories as first-class entities
+- Purchase orders and receiving
+- Sales/orders and customer accounts
+- Delivery/status notifications beyond authentication
+- Richer reporting and inventory valuation
+- Barcode support
+- Production deployment hardening and green CI
