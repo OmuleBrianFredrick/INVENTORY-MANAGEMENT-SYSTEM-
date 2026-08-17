@@ -59,7 +59,7 @@ jobs:
           APP_ENV: testing
           DB_CONNECTION: sqlite
           DB_DATABASE: database/database.sqlite
-        run: php artisan route:list --except-vendor 2>&1 | tee routes.log
+        run: php artisan route:list 2>&1 | tee routes.log
 
       - name: Run tests with detailed output
         env:
