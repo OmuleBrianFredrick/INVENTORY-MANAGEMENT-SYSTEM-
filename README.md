@@ -1,6 +1,6 @@
 # Advanced Inventory Management System
 
-A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, security logs, supplier management, controlled product categories and procurement/receiving workflows.
+A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, security logs, supplier management, controlled product categories, procurement/receiving workflows, customers and sales orders.
 
 ## Core features
 
@@ -15,6 +15,9 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 - First-class category directory with active/archive workflow and product relationships
 - Purchase orders with suppliers, line items, costs, expected dates and status lifecycle
 - Partial/full goods receiving with transaction-safe stock updates and stock movement entries
+- Customer directory and customer records for sales
+- Sales orders with line items, stock validation, atomic stock deduction and order numbers
+- Payment and delivery status tracking
 - Administrator, manager and staff roles
 - Administrator-only user management with role/status/password editing
 - Cream, charcoal and bronze visual theme replacing the reference blue interface
@@ -25,7 +28,11 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 
 Purchase orders sit between suppliers and inventory. A manager creates a draft order, marks it ordered, then records physical receipts. Receiving is incremental: a purchase order may be partially received, and each received quantity increases the product stock while creating a `STOCK_IN` entry in the stock movement ledger. A completed order is marked `received`; no receipt can exceed the outstanding ordered quantity.
 
-Purchase order totals are calculated from quantity × unit cost at creation time. The current implementation deliberately keeps tax at zero until a dedicated tax configuration layer is introduced, avoiding hidden financial assumptions.
+## Sales architecture
+
+Sales orders connect customers to inventory. A manager creates an order with one or more products. The service validates stock while holding the selected product rows for update, deducts the sold quantity inside the same database transaction, creates order line items, and records a `STOCK_OUT` movement. This prevents an order from being created while inventory remains unchanged or from silently selling more stock than is available.
+
+Orders also track payment state (`unpaid`, `partial`, `paid`, `refunded`) and delivery state (`pending`, `processing`, `shipped`, `delivered`, `cancelled`). Payment processing itself is intentionally not coupled to the order engine yet; a dedicated payment layer will be added later.
 
 ## Category architecture
 
@@ -46,10 +53,8 @@ Default categories are seeded for a fresh installation: General, Electronics, Ho
 ## Roles
 
 - **Administrator**: full inventory and user-management access.
-- **Manager**: product, stock, supplier, category and procurement-management access.
+- **Manager**: product, stock, supplier, category, procurement and sales-management access.
 - **Staff**: authenticated platform access without management privileges by default.
-
-The first account registered in a fresh database is provisioned as administrator. For deterministic deployments, set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` and run the database seeder.
 
 ## Local setup
 
@@ -87,7 +92,7 @@ The default `.env.example` uses Laravel's `log` mailer so local development does
 - Added `products.category_id` foreign key while preserving the legacy category name.
 - Changed product create/edit flows to require an active controlled category.
 - Added default category seeding for fresh databases.
-- Updated sidebar navigation and this README.
+- Updated sidebar navigation and README.
 
 ### Phase — Purchase orders and receiving
 
@@ -99,7 +104,17 @@ The default `.env.example` uses Laravel's `log` mailer so local development does
 - Connected receiving to the existing stock movement ledger so inventory changes remain auditable.
 - Added manager-only procurement routes and UI.
 - Added feature tests for order creation and stock-receipt behavior.
-- Updated navigation and roadmap.
+
+### Phase — Customers and sales orders
+
+- Added customers with active/inactive status and searchable directory.
+- Added sales orders and order items with customer association.
+- Added atomic stock validation and deduction when an order is created.
+- Added `STOCK_OUT` ledger entries for every sold quantity.
+- Added payment and delivery status management.
+- Added sales order detail and status views.
+- Added customer and sales navigation.
+- Deliberately kept payment processing separate from order creation for a future dedicated payment layer.
 
 ## Build notes
 
@@ -107,8 +122,9 @@ The reference repository was used as a functional baseline for authentication, p
 
 ## Roadmap
 
-- Sales/orders and customer accounts
 - Delivery/status notifications beyond authentication
 - Richer reporting and inventory valuation
 - Barcode support
+- Returns and refunds workflow
+- Payment gateway integration
 - Production deployment hardening and green CI
