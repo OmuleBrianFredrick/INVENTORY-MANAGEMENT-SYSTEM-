@@ -1,67 +1,56 @@
 # Advanced Inventory Management System
 
-A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, security logs, supplier management, controlled product categories, procurement/receiving workflows, customers, sales orders and actionable inventory alerts.
+A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, security logs, suppliers, categories, procurement/receiving, customers, sales orders, inventory alerts, reporting/valuation, returns/refunds and barcode support.
 
 ## Core features
 
 - Laravel 12 / PHP 8.2+
-- Email + password sign-in followed by a mandatory six-digit email OTP
+- Mandatory email OTP after every password sign-in
 - OTP hashing, expiry, one-time verification, attempt limits and resend cooldown
-- Authentication event logging for login attempts, OTP sent/resent, verification and logout
-- Product CRUD with SKU, controlled category, cost/selling price, images, stock and reorder levels
-- Stock-in / stock-out operations with an auditable stock movement ledger
-- Low-stock indicators and persisted manager/admin inventory alerts
-- Supplier directory with search, contacts, tax number, status, notes and archive workflow
-- First-class category directory with active/archive workflow and product relationships
-- Purchase orders with suppliers, line items, costs, expected dates and status lifecycle
-- Partial/full goods receiving with transaction-safe stock updates and stock movement entries
-- Customer directory and customer records for sales
-- Sales orders with line items, stock validation, atomic stock deduction and order numbers
+- Authentication event logging
+- Product CRUD with SKU, barcode, category, cost/selling price, images, stock and reorder levels
+- Barcode-aware product search
+- Auditable stock-in, stock-out, opening, adjustment and return movements
+- Supplier and category management
+- Purchase orders and partial/full goods receiving
+- Customer records and sales orders
+- Atomic stock deduction for sales
 - Payment and delivery status tracking
-- In-app inventory alert center with unread count, read and mark-all-read actions
+- Returns/refunds workflow that restores returned stock
+- Inventory alert centre with unread/read state
+- Management reporting and inventory valuation
+- Inventory value by category and stock movement summaries
 - Administrator, manager and staff roles
-- Administrator-only user management with role/status/password editing
-- Cream, charcoal and bronze visual theme replacing the reference blue interface
-- Laravel migrations and PHPUnit feature tests
-- GitHub Actions CI with SQLite database initialization and migration before tests
+- Administrator user management
+- Cream, charcoal and bronze visual theme
+- PHPUnit tests and GitHub Actions CI
 
-## Alert architecture
+## Valuation model
 
-Inventory alerts are generated when a product is at or below its reorder level after creation, editing, stock-in or stock-out operations. Alerts are persisted per administrator/manager so important inventory conditions are not lost when a session ends. Users can see an unread count in the application header, open the alert center, mark individual alerts read, or mark all alerts read.
+Reports distinguish three management values:
 
-The alert layer is intentionally separate from email delivery. This gives the application a reliable in-app notification source first; email/SMS/push delivery can be attached later without coupling notification transport to inventory transactions.
+- **Cost value:** current stock multiplied by product cost price.
+- **Retail value:** current stock multiplied by selling price.
+- **Potential gross margin:** retail value minus cost value.
 
-## Procurement architecture
+The reporting layer also shows low/out-of-stock counts, sales totals, purchase totals, stock movement summaries and valuation by category.
 
-Purchase orders sit between suppliers and inventory. A manager creates a draft order, marks it ordered, then records physical receipts. Receiving is incremental: a purchase order may be partially received, and each received quantity increases the product stock while creating a `STOCK_IN` entry in the stock movement ledger. A completed order is marked `received`; no receipt can exceed the outstanding ordered quantity.
+## Returns and refunds
 
-## Sales architecture
+Returns are tied to sales orders and order items. The system validates that returned quantities do not exceed the quantity originally sold less previous returns. Processing occurs inside a database transaction, restores returned quantities to stock and records a `RETURN` stock movement. Refund status remains explicit so future payment-gateway processing can be attached without changing inventory accounting.
 
-Sales orders connect customers to inventory. A manager creates an order with one or more products. The system validates stock while holding the selected product rows for update, deducts the sold quantity inside the same database transaction, creates order line items, and records a `STOCK_OUT` movement. This prevents an order from being created while inventory remains unchanged or from silently selling more stock than is available.
+## Barcode support
 
-Orders also track payment state (`unpaid`, `partial`, `paid`, `refunded`) and delivery state (`pending`, `processing`, `shipped`, `delivered`, `cancelled`). Payment processing itself is intentionally not coupled to the order engine yet; a dedicated payment layer will be added later.
-
-## Category architecture
-
-Products reference a normalized `categories` table through `products.category_id`. The legacy `products.category` text field remains populated with the selected category name so existing data and reporting do not break during the transition.
-
-Default categories are seeded for a fresh installation: General, Electronics, Home & Office, Fashion, and Food & Beverage. Managers can create and archive categories from the Categories directory.
+Products now have an optional unique barcode in addition to SKU. The product create/edit forms accept barcodes and the inventory search can match product name, SKU or barcode. This provides the data layer needed for USB/Bluetooth scanner workflows without tying the application to a specific scanner vendor.
 
 ## Authentication flow
 
 1. User submits email and password.
 2. Credentials and account status are validated.
 3. A six-digit OTP is generated and stored only as a hash.
-4. The OTP is emailed to the user's registered address.
-5. The sign-in event is recorded in `authentication_logs`.
+4. The OTP is emailed to the registered address.
+5. The authentication event is logged.
 6. The user must enter the OTP before Laravel authenticates the session.
-7. Invalid, expired or exhausted OTP challenges cannot grant access.
-
-## Roles
-
-- **Administrator**: full inventory and user-management access.
-- **Manager**: product, stock, supplier, category, procurement and sales-management access.
-- **Staff**: authenticated platform access without management privileges by default.
 
 ## Local setup
 
@@ -77,67 +66,60 @@ php artisan test
 php artisan serve
 ```
 
-### Real email delivery
+For real OTP email delivery, configure SMTP values in `.env`. Never commit `.env` or production credentials.
 
-The default `.env.example` uses Laravel's `log` mailer so local development does not require an SMTP server. For real OTP delivery, configure `MAIL_MAILER=smtp` and the corresponding SMTP host, port, username, password and from address.
+## Roles
 
-## Security notes
-
-- Never commit `.env` or real SMTP credentials.
-- OTP values are not stored in plaintext.
-- Keep OTP expiry short and use HTTPS in production.
-- Use a real SMTP provider for production email delivery.
-- Rotate administrator credentials before deployment.
+- **Administrator:** full platform and user-management access.
+- **Manager:** inventory, suppliers, categories, procurement and sales-management access.
+- **Staff:** authenticated platform access without management privileges by default.
 
 ## Implementation log
 
 ### Phase — First-class categories
 
-- Added `categories` migration with unique names, descriptions, active status and soft deletion.
-- Added `Category` model and product relationship.
-- Added manager-only category directory, creation and archive workflow.
-- Added `products.category_id` foreign key while preserving the legacy category name.
-- Changed product create/edit flows to require an active controlled category.
-- Added default category seeding for fresh databases.
-- Updated sidebar navigation and README.
+- Added normalized categories and product relationship.
+- Added manager category creation/archive workflow.
+- Preserved legacy category text for compatibility.
 
-### Phase — Purchase orders and receiving
+### Phase — Procurement and receiving
 
-- Added purchase order and purchase order item database tables.
-- Added supplier-linked purchase orders with unique order numbers.
+- Added supplier-linked purchase orders.
 - Added draft → ordered → partial/received lifecycle.
-- Added multi-line purchase order creation with unit costs and calculated totals.
-- Added incremental goods receiving with remaining-quantity validation.
-- Connected receiving to the existing stock movement ledger so inventory changes remain auditable.
-- Added manager-only procurement routes and UI.
+- Added transaction-safe receiving and stock ledger entries.
 
-### Phase — Customers and sales orders
+### Phase — Customers and sales
 
-- Added customers with active/inactive status and searchable directory.
-- Added sales orders and order items with customer association.
-- Added atomic stock validation and deduction when an order is created.
-- Added `STOCK_OUT` ledger entries for every sold quantity.
-- Added payment and delivery status management.
-- Added sales order detail and status views.
-- Deliberately kept payment processing separate from order creation for a future dedicated payment layer.
+- Added customer directory.
+- Added sales orders and order items.
+- Added atomic stock deduction and `STOCK_OUT` ledger entries.
+- Added payment and delivery states.
 
 ### Phase — Inventory alerts
 
-- Added persisted `inventory_alerts` records per manager/administrator.
-- Added low-stock alert generation after product and stock changes.
-- Added unread alert counts to the authenticated application header.
-- Added alert center with pagination and read/mark-all-read actions.
-- Kept notification storage separate from email transport for clean future expansion.
+- Added persistent manager/admin inventory alerts.
+- Added low-stock alert generation.
+- Added alert centre and read state.
 
-## Build notes
+### Phase — Reporting and valuation
 
-The reference repository was used as a functional baseline for authentication, product management, images, stock operations and Laravel project conventions. This repository deliberately improves the weak points identified during the review instead of copying them unchanged.
+- Added management report controller and dashboard.
+- Added cost, retail and potential-margin valuation.
+- Added category valuation and movement summaries.
+- Added sales/purchase totals and stock-health indicators.
 
-## Roadmap
+### Phase — Returns, refunds and barcode
 
-- Richer reporting and inventory valuation
-- Barcode support
-- Returns and refunds workflow
-- Email/SMS/push delivery notifications
-- Payment gateway integration
-- Production deployment hardening and green CI
+- Added return and return-item tables.
+- Added return processing with remaining-quantity validation.
+- Restored returned goods into stock and recorded `RETURN` movements.
+- Added unique product barcode and barcode-aware search.
+- Added barcode inputs to product creation/editing.
+
+## Build order
+
+All functional phases are being executed before the final hardening/polishing pass. The final pass will address CI, regression tests, UX consistency, validation edge cases, database indexing, performance, deployment configuration, documentation and production security.
+
+## Reference
+
+The original `kisamac1/Inventorysystem` repository was used only as the functional reference. This repository is the independent rebuilt implementation and intentionally improves architectural weaknesses identified during the review.
