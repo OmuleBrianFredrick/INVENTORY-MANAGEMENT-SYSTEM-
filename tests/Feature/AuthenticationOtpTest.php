@@ -1,0 +1,4 @@
+<?php
+namespace Tests\Feature;
+use App\Models\User;use Illuminate\Foundation\Testing\RefreshDatabase;use Illuminate\Support\Facades\Hash;use Illuminate\Support\Facades\Mail;use Tests\TestCase;
+class AuthenticationOtpTest extends TestCase {use RefreshDatabase;public function test_valid_password_sends_otp_instead_of_logging_in():void{$user=User::create(['name'=>'Test User','email'=>'test@example.com','password'=>Hash::make('password123'),'role'=>'staff','is_active'=>true]);Mail::fake();$response=$this->post('/login',['email'=>$user->email,'password'=>'password123']);$response->assertRedirect('/verify-otp');$this->assertGuest();$this->assertDatabaseHas('otp_challenges',['user_id'=>$user->id]);Mail::assertSent(\App\Mail\LoginOtpMail::class);}public function test_invalid_password_does_not_create_otp():void{Mail::fake();$this->post('/login',['email'=>'missing@example.com','password'=>'wrongpassword']);$this->assertGuest();$this->assertDatabaseCount('otp_challenges',0);}}
