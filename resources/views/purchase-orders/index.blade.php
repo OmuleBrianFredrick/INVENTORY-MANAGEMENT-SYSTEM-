@@ -1,0 +1,6 @@
+@extends('layout.app')
+@section('title','Purchase Orders')
+@section('content')
+<div class="page-head"><div><span class="eyebrow">PROCUREMENT</span><h1>Purchase orders</h1><p class="muted">Create orders, track supplier commitments and receive goods into stock.</p></div><a class="btn btn-primary" href="{{ route('purchase-orders.create') }}">＋ New purchase order</a></div>
+<div class="panel"><form method="GET" class="toolbar"><input name="q" value="{{ request('q') }}" placeholder="Search order number or supplier"><button class="btn btn-light">Search</button></form><div class="table-wrap"><table><thead><tr><th>Order</th><th>Supplier</th><th>Date</th><th>Total</th><th>Status</th><th></th></tr></thead><tbody>@forelse($orders as $order)<tr><td><strong>{{ $order->order_number }}</strong></td><td>{{ $order->supplier->name }}</td><td>{{ $order->order_date->format('d M Y') }}</td><td>UGX {{ number_format($order->total_amount,2) }}</td><td>{{ ucfirst($order->status) }}</td><td><a class="btn btn-light" href="{{ route('purchase-orders.show',$order) }}">Open</a></td></tr>@empty<tr><td colspan="6" class="muted">No purchase orders found.</td></tr>@endforelse</tbody></table></div>{{ $orders->links() }}</div>
+@endsection
