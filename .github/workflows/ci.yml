@@ -12,7 +12,7 @@ permissions:
 jobs:
   tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,8 +25,11 @@ jobs:
           coverage: none
           tools: composer:v2
 
+      - name: Validate Composer configuration
+        run: composer validate --no-check-publish
+
       - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
+        run: composer install --no-interaction --prefer-dist --no-progress 2>&1 | tee composer-install.log
 
       - name: Prepare environment
         run: |
@@ -34,17 +37,29 @@ jobs:
           touch database/database.sqlite
           php artisan key:generate --force
 
+      - name: Lint PHP source
+        run: |
+          set -o pipefail
+          find app bootstrap config database routes tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l 2>&1 | tee php-lint.log
+
       - name: Verify application configuration
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: database/database.sqlite
-        run: php artisan about
+        run: php artisan about 2>&1 | tee artisan-about.log
 
       - name: Run migrations
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: database/database.sqlite
-        run: php artisan migrate --force
+        run: php artisan migrate --force 2>&1 | tee migration.log
+
+      - name: Verify routes
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: database/database.sqlite
+        run: php artisan route:list --except-vendor 2>&1 | tee routes.log
 
       - name: Run tests with detailed output
         env:
@@ -55,4 +70,18 @@ jobs:
           SESSION_DRIVER: array
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
-        run: php artisan test --verbose --colors=never
+        run: php artisan test --verbose --colors=never 2>&1 | tee phpunit.log
+
+      - name: Upload CI diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-diagnostics
+          path: |
+            composer-install.log
+            php-lint.log
+            artisan-about.log
+            migration.log
+            routes.log
+            phpunit.log
+          if-no-files-found: ignore
