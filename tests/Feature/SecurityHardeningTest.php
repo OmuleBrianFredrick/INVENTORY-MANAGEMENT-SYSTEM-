@@ -37,4 +37,12 @@ class SecurityHardeningTest extends TestCase
         $this->post(route('login.post'),['email'=>$user->email,'password'=>'correct-password'])->assertRedirect(route('products.index'));
         $this->assertAuthenticatedAs($user);
     }
+
+    public function test_last_active_admin_cannot_be_removed(): void
+    {
+        $admin=User::create(['name'=>'Admin','email'=>'admin@example.test','password'=>Hash::make('password'),'role'=>'admin','is_active'=>true]);
+        $this->actingAs($admin)->put(route('users.update',$admin->id),['name'=>'Admin','email'=>$admin->email,'role'=>'manager','is_active'=>0])
+            ->assertSessionHasErrors('role');
+        $this->assertDatabaseHas('users',['id'=>$admin->id,'role'=>'admin','is_active'=>true]);
+    }
 }
