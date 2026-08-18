@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Mail\EmployeeInvitationMail;
+use App\Models\EmployeeInvitation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class SecurityHardeningTest extends TestCase
@@ -42,19 +45,23 @@ class SecurityHardeningTest extends TestCase
         $this->assertDatabaseHas('users',['id'=>$admin->id,'role'=>'admin','is_active'=>true]);
     }
 
-    public function test_admin_can_create_manager_employee(): void
+    public function test_admin_can_invite_manager_without_setting_a_password(): void
     {
         $admin=User::create(['name'=>'Admin','email'=>'admin-create@example.test','password'=>Hash::make('password'),'role'=>'admin','is_active'=>true]);
-        $this->actingAs($admin)->post(route('users.store'),['name'=>'Manager','email'=>'manager-create@example.test','role'=>'manager','password'=>'password123','password_confirmation'=>'password123'])->assertRedirect(route('users.index'));
-        $this->assertDatabaseHas('users',['email'=>'manager-create@example.test','role'=>'manager','is_active'=>true]);
+        Mail::fake();
+        $this->actingAs($admin)->post(route('users.store'),['name'=>'Manager','email'=>'manager-create@example.test','role'=>'manager'])->assertRedirect(route('users.index'));
+        $this->assertDatabaseHas('users',['email'=>'manager-create@example.test','role'=>'manager','is_active'=>false]);
+        $this->assertDatabaseCount('employee_invitations',1);
+        Mail::assertSent(EmployeeInvitationMail::class);
     }
 
-    public function test_manager_can_create_staff_but_cannot_create_manager(): void
+    public function test_manager_can_invite_staff_but_cannot_invite_manager(): void
     {
         $manager=User::create(['name'=>'Manager','email'=>'manager-create2@example.test','password'=>Hash::make('password'),'role'=>'manager','is_active'=>true]);
-        $this->actingAs($manager)->post(route('users.store'),['name'=>'Staff','email'=>'staff-create@example.test','role'=>'staff','password'=>'password123','password_confirmation'=>'password123'])->assertRedirect(route('users.index'));
-        $this->assertDatabaseHas('users',['email'=>'staff-create@example.test','role'=>'staff']);
-        $this->actingAs($manager)->post(route('users.store'),['name'=>'Manager Two','email'=>'manager-two@example.test','role'=>'manager','password'=>'password123','password_confirmation'=>'password123'])->assertStatus(422);
+        Mail::fake();
+        $this->actingAs($manager)->post(route('users.store'),['name'=>'Staff','email'=>'staff-create@example.test','role'=>'staff'])->assertRedirect(route('users.index'));
+        $this->assertDatabaseHas('users',['email'=>'staff-create@example.test','role'=>'staff','is_active'=>false]);
+        $this->actingAs($manager)->post(route('users.store'),['name'=>'Manager Two','email'=>'manager-two@example.test','role'=>'manager'])->assertForbidden();
         $this->assertDatabaseMissing('users',['email'=>'manager-two@example.test']);
     }
 
@@ -62,6 +69,6 @@ class SecurityHardeningTest extends TestCase
     {
         $staff=User::create(['name'=>'Staff','email'=>'staff-create2@example.test','password'=>Hash::make('password'),'role'=>'staff','is_active'=>true]);
         $this->actingAs($staff)->get(route('users.create'))->assertForbidden();
-        $this->actingAs($staff)->post(route('users.store'),['name'=>'Another','email'=>'another-staff@example.test','role'=>'staff','password'=>'password123','password_confirmation'=>'password123'])->assertForbidden();
+        $this->actingAs($staff)->post(route('users.store'),['name'=>'Another','email'=>'another-staff@example.test','role'=>'staff'])->assertForbidden();
     }
 }
