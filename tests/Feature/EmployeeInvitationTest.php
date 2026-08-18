@@ -59,6 +59,11 @@ class EmployeeInvitationTest extends TestCase
             'role' => 'staff',
         ]);
         $allowed->assertRedirect(route('users.index'));
+        $this->assertDatabaseHas('users', [
+            'email' => 'staff@example.test',
+            'role' => 'staff',
+            'is_active' => false,
+        ]);
 
         $blocked = $this->actingAs($manager)->post(route('users.store'), [
             'name' => 'Second Manager',
@@ -163,6 +168,8 @@ class EmployeeInvitationTest extends TestCase
 
         $response->assertRedirect(route('users.index'));
         $this->assertNotNull($invitation->fresh()->revoked_at);
+
+        $this->post(route('logout'));
         $this->get(route('employee-invitation.show', $token))->assertStatus(410);
     }
 
