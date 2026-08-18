@@ -1,28 +1,26 @@
 @extends('layout.app')
-@section('title','Create Employee Account')
-@section('page_title','Create Employee Account')
+@section('title','Invite Employee')
+@section('page_title','Invite Employee')
 @section('content')
 <div class="page-head">
     <div>
         <span class="eyebrow">UJUZI SHOP MALL</span>
-        <h1>Create Employee Account</h1>
-        <p class="muted">Create a controlled company account. Employees do not self-register.</p>
+        <h1>Invite Employee</h1>
+        <p class="muted">Employees do not receive passwords from administrators. Send a secure invitation so they can create their own password.</p>
     </div>
 </div>
 <div class="panel form-panel">
     <form method="POST" action="{{ route('users.store') }}">
         @csrf
         <div class="grid-2">
-            <label>Name<input name="name" value="{{ old('name') }}" required></label>
-            <label>Email<input type="email" name="email" value="{{ old('email') }}" required></label>
-            <label>Role<select name="role" required>@foreach($roles as $role)<option value="{{ $role }}" @selected(old('role')===$role)>{{ ucfirst($role) }}</option>@endforeach</select></label>
-            <label>Password<input type="password" name="password" required minlength="8"></label>
-            <label>Confirm password<input type="password" name="password_confirmation" required minlength="8"></label>
+            <label>Name<input name="name" value="{{ old('name') }}" required autocomplete="name"></label>
+            <label>Company email<input type="email" name="email" value="{{ old('email') }}" required autocomplete="email"></label>
+            <label>Role<select name="role" required>@foreach($roles as $role)<option value="{{ $role }}" @selected(old('role') === $role)>{{ ucfirst($role) }}</option>@endforeach</select></label>
         </div>
-        <p class="muted">The account is activated immediately. Share the initial credentials with the employee through a secure channel.</p>
+        <p class="muted">The account starts pending and inactive. The employee becomes active only after accepting the email invitation and setting a password. The invitation expires after 24 hours.</p>
         <div class="form-actions">
             <a class="btn btn-light" href="{{ route('users.index') }}">Cancel</a>
-            <button class="btn btn-primary">Create account</button>
+            <button class="btn btn-primary">Send invitation</button>
         </div>
     </form>
 </div>
