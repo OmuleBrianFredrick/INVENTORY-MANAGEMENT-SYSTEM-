@@ -15,6 +15,7 @@ class UserController extends Controller
 
     private function canManageUser(User $actor, User $target): bool
     {
+        if ($target->isCustomer()) return false;
         if ($actor->isAdmin()) return true;
         return $actor->isManager() && $target->isStaff();
     }
@@ -22,7 +23,9 @@ class UserController extends Controller
     public function index(Request $r)
     {
         $this->manager($r);
-        $users = $r->user()->isAdmin() ? User::latest()->get() : User::where('role', 'staff')->latest()->get();
+        $users = $r->user()->isAdmin()
+            ? User::whereIn('role', ['admin','manager','staff'])->latest()->get()
+            : User::where('role', 'staff')->latest()->get();
         return view('users.index', compact('users'));
     }
 
