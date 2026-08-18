@@ -11,6 +11,12 @@ class AuthenticationOtpTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutMiddleware();
+    }
+
     public function test_manager_password_sends_otp_instead_of_logging_in(): void
     {
         $user=User::create(['name'=>'Manager','email'=>'manager@example.com','password'=>Hash::make('password123'),'role'=>'manager','is_active'=>true]);
