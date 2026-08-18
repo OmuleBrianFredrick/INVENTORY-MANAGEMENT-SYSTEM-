@@ -11,17 +11,18 @@ class AuthenticationOtpTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
+    private function postLogin(array $credentials)
     {
-        parent::setUp();
-        $this->withoutMiddleware();
+        return $this->post('/login', array_merge($credentials, [
+            '_token' => csrf_token(),
+        ]));
     }
 
     public function test_manager_password_sends_otp_instead_of_logging_in(): void
     {
         $user=User::create(['name'=>'Manager','email'=>'manager@example.com','password'=>Hash::make('password123'),'role'=>'manager','is_active'=>true]);
         Mail::fake();
-        $response=$this->post('/login',['email'=>$user->email,'password'=>'password123']);
+        $response=$this->postLogin(['email'=>$user->email,'password'=>'password123']);
         $response->assertRedirect('/verify-otp');
         $this->assertGuest();
         $this->assertDatabaseHas('otp_challenges',['user_id'=>$user->id]);
@@ -32,7 +33,7 @@ class AuthenticationOtpTest extends TestCase
     {
         $user=User::create(['name'=>'Staff','email'=>'staff@example.com','password'=>Hash::make('password123'),'role'=>'staff','is_active'=>true]);
         Mail::fake();
-        $response=$this->post('/login',['email'=>$user->email,'password'=>'password123']);
+        $response=$this->postLogin(['email'=>$user->email,'password'=>'password123']);
         $response->assertRedirect('/products');
         $this->assertAuthenticatedAs($user);
         $this->assertDatabaseCount('otp_challenges',0);
@@ -42,7 +43,7 @@ class AuthenticationOtpTest extends TestCase
     public function test_invalid_password_does_not_create_otp(): void
     {
         Mail::fake();
-        $this->post('/login',['email'=>'missing@example.com','password'=>'wrongpassword']);
+        $this->postLogin(['email'=>'missing@example.com','password'=>'wrongpassword']);
         $this->assertGuest();
         $this->assertDatabaseCount('otp_challenges',0);
     }
