@@ -34,7 +34,7 @@ class AuthController extends Controller
         RateLimiter::clear($key);
         if(!$user->is_active)return back()->withErrors(['email'=>'This account is inactive. Contact an administrator.'])->onlyInput('email');
 
-        // OTP is restricted to inventory managers/admins. Ordinary staff authenticate with password only.
+        // OTP is restricted to privileged inventory managers/admins. Staff and customers use password login.
         if(!$user->isManager()){
             Auth::login($user);
             $request->session()->regenerate();
@@ -45,7 +45,6 @@ class AuthController extends Controller
         $code=(string)random_int(100000,999999);
         $challenge=OtpChallenge::create(['user_id'=>$user->id,'code_hash'=>Hash::make($code),'expires_at'=>now()->addMinutes((int)env('OTP_EXPIRY_MINUTES',5)),'last_sent_at'=>now(),'ip_address'=>$request->ip()]);
         $request->session()->put('otp_challenge_id',$challenge->id);
-        // OTP is delivered by email only. Never write the OTP code or an OTP-sent event to authentication logs.
         Mail::to($user->email)->send(new LoginOtpMail($code,$user->name,(int)env('OTP_EXPIRY_MINUTES',5)));
         return redirect()->route('otp.form');
     }
@@ -81,12 +80,18 @@ class AuthController extends Controller
         if($challenge->last_sent_at&&$challenge->last_sent_at->addSeconds((int)env('OTP_RESEND_SECONDS',60))->isFuture())return back()->withErrors(['otp'=>'Please wait before requesting another code.']);
         $code=(string)random_int(100000,999999);
         $challenge->update(['code_hash'=>Hash::make($code),'expires_at'=>now()->addMinutes((int)env('OTP_EXPIRY_MINUTES',5)),'attempts'=>0,'last_sent_at'=>now(),'verified_at'=>null]);
-        // Replacement OTP is delivered by email only. Do not record the OTP itself or an OTP-resend event in logs.
         Mail::to($challenge->user->email)->send(new LoginOtpMail($code,$challenge->user->name,(int)env('OTP_EXPIRY_MINUTES',5)));
         return back()->with('success','A new verification code has been sent.');
     }
 
     public function showRegistrationForm(){return view('auth.register');}
-    public function register(Request $request){$request->validate(['name'=>['required','string','max:255'],'email'=>['required','email','max:255','unique:users,email'],'password'=>['required','string','min:8','confirmed']]);$role=User::count()===0?'admin':'staff';User::create(['name'=>$request->name,'email'=>strtolower(trim($request->email)),'password'=>Hash::make($request->password),'role'=>$role,'is_active'=>true]);return redirect()->route('login')->with('success','Account created. Sign in to continue.');}
+
+    public function register(Request $request)
+    {
+        $request->validate(['name'=>['required','string','max:255'],'email'=>['required','email','max:255','unique:users,email'],'password'=>['required','string','min:8','confirmed']]);
+        User::create(['name'=>$request->name,'email'=>strtolower(trim($request->email)),'password'=>Hash::make($request->password),'role'=>'customer','is_active'=>true]);
+        return redirect()->route('login')->with('success','Customer account created. Sign in to continue.');
+    }
+
     public function logout(Request $request){$user=Auth::user();if($user)AuthenticationLog::create(['user_id'=>$user->id,'email'=>$user->email,'event'=>'LOGOUT','status'=>'SUCCESS','ip_address'=>$request->ip(),'user_agent'=>$request->userAgent(),'details'=>'User logged out']);Auth::logout();$request->session()->invalidate();$request->session()->regenerateToken();return redirect()->route('login');}
 }
