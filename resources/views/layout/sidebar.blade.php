@@ -1,9 +1,9 @@
 <aside class="sidebar">
     <div class="brand">
-        <span class="brand-mark">IM</span>
+        <span class="brand-mark">UZ</span>
         <div>
-            <strong>Inventory</strong>
-            <small>Management System</small>
+            <strong>UJUZI SHOP MALL</strong>
+            <small>Smart Inventory &amp; Shopping Management</small>
         </div>
     </div>
 
