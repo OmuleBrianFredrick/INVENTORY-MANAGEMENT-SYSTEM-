@@ -102,7 +102,7 @@ class EmployeeInvitationController extends Controller
             'user_id' => $user->id,
             'invited_by' => $actor->id,
             'token_hash' => hash('sha256', $token),
-            'expires_at' => now()->addHours(24),
+            'expires_at' => now()->addHours((int) env('EMPLOYEE_INVITATION_EXPIRY_HOURS', 24)),
         ]);
 
         Mail::to($user->email)->send(new EmployeeInvitationMail($invitation, $token));
