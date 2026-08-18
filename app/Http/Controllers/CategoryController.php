@@ -51,7 +51,7 @@ class CategoryController extends Controller
     {
         $this->manager($request);
         $category = Category::findOrFail($id);
-        $category->update(['is_active' => false]);
+        $category->delete();
         return Redirect::route('categories.index')->with('success', 'Category archived successfully.');
     }
 }
