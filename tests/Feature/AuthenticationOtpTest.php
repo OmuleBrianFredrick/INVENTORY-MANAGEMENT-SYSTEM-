@@ -1,4 +1,5 @@
 <?php
+
 namespace Tests\Feature;
 
 use App\Models\User;
@@ -13,9 +14,15 @@ class AuthenticationOtpTest extends TestCase
 
     private function postLogin(array $credentials)
     {
-        return $this->post('/login', array_merge($credentials, [
+        return $this->withSession([])->post('/login', array_merge($credentials, [
             '_token' => csrf_token(),
         ]));
+    }
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withSession([]);
     }
 
     public function test_manager_password_sends_otp_instead_of_logging_in(): void
