@@ -95,6 +95,25 @@ class EmployeeInvitationController extends Controller
         return redirect()->route('users.index')->with('success', 'A new invitation was sent to ' . $user->email . '.');
     }
 
+    public function revoke(Request $request, int $id)
+    {
+        $actor = $request->user();
+        abort_unless($actor->isManager(), 403);
+
+        $user = User::findOrFail($id);
+        abort_unless($this->canInviteRole($actor, $user), 403);
+        abort_unless(!$user->is_active, 409);
+
+        $updated = EmployeeInvitation::where('user_id', $user->id)
+            ->whereNull('accepted_at')
+            ->whereNull('revoked_at')
+            ->update(['revoked_at' => now()]);
+
+        abort_unless($updated > 0, 404);
+
+        return redirect()->route('users.index')->with('success', 'The invitation for ' . $user->email . ' has been revoked.');
+    }
+
     private function sendInvitation(User $user, User $actor): void
     {
         $token = Str::random(64);
