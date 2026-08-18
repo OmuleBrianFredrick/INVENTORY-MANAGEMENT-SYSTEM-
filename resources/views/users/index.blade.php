@@ -17,7 +17,7 @@
             <td><span class="status {{ $user->is_active?'good':'warn' }}">{{ $user->is_active?'Active':'Pending invitation' }}</span></td>
             <td>{{ $user->created_at->format('d M Y') }}</td>
             <td>
-                @if($pending && ($loop->parent ?? true))
+                @if($pending)
                     @if(auth()->user()->isAdmin() || $user->role === 'staff')
                         <form method="POST" action="{{ route('users.resend-invitation',$user->id) }}" style="display:inline">
                             @csrf
