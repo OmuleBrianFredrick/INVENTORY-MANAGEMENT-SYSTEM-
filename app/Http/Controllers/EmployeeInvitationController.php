@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\EmployeeInvitationMail;
 use App\Models\EmployeeInvitation;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -70,6 +71,32 @@ class EmployeeInvitationController extends Controller
             'is_active' => false,
         ]);
 
+        $this->sendInvitation($user, $actor);
+
+        return redirect()->route('users.index')->with('success', ucfirst($user->role) . ' invitation sent to ' . $user->email . '.');
+    }
+
+    public function resend(Request $request, int $id)
+    {
+        $actor = $request->user();
+        abort_unless($actor->isManager(), 403);
+
+        $user = User::findOrFail($id);
+        abort_unless($this->canInviteRole($actor, $user), 403);
+        abort_unless(!$user->is_active, 409);
+
+        EmployeeInvitation::where('user_id', $user->id)
+            ->whereNull('accepted_at')
+            ->whereNull('revoked_at')
+            ->update(['revoked_at' => now()]);
+
+        $this->sendInvitation($user, $actor);
+
+        return redirect()->route('users.index')->with('success', 'A new invitation was sent to ' . $user->email . '.');
+    }
+
+    private function sendInvitation(User $user, User $actor): void
+    {
         $token = Str::random(64);
         $invitation = EmployeeInvitation::create([
             'user_id' => $user->id,
@@ -78,9 +105,15 @@ class EmployeeInvitationController extends Controller
             'expires_at' => now()->addHours(24),
         ]);
 
-        Mail::to($user->email)->send(new \App\Mail\EmployeeInvitationMail($invitation, $token));
+        Mail::to($user->email)->send(new EmployeeInvitationMail($invitation, $token));
+    }
 
-        return redirect()->route('users.index')->with('success', ucfirst($user->role) . ' invitation sent to ' . $user->email . '.');
+    private function canInviteRole(User $actor, User $target): bool
+    {
+        if ($target->isCustomer() || $target->isAdmin()) {
+            return false;
+        }
+        return $actor->isAdmin() || ($actor->isManager() && $target->isStaff());
     }
 
     private function findInvitation(string $token): EmployeeInvitation
