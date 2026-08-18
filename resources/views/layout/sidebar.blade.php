@@ -17,10 +17,10 @@
             <a href="{{ route('purchase-orders.index') }}" class="nav-link">▱ Purchase Orders</a>
             <a href="{{ route('customers.index') }}" class="nav-link">♙ Customers</a>
             <a href="{{ route('orders.index') }}" class="nav-link">▤ Sales Orders</a>
+            <a href="{{ route('users.index') }}" class="nav-link">♙ Employee Accounts</a>
         @endif
 
         @if(auth()->user()->isAdmin())
-            <a href="{{ route('users.index') }}" class="nav-link">♙ User Management</a>
             <a href="{{ route('security.logs') }}" class="nav-link">⌁ Security Logs</a>
         @endif
     </nav>
