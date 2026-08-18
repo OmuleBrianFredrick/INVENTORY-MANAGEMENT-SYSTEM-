@@ -55,6 +55,10 @@ class EmployeeInvitationController extends Controller
         $actor = $request->user();
         abort_unless($actor->isManager(), 403);
 
+        if ($actor->isManager() && !$actor->isAdmin() && $request->input('role') === 'manager') {
+            abort(403);
+        }
+
         $allowedRoles = $actor->isAdmin() ? ['manager', 'staff'] : ['staff'];
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
