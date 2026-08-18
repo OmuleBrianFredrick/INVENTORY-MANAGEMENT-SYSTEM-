@@ -1,11 +1,13 @@
-# Advanced Inventory Management System
+# UJUZI SHOP MALL
 
-A Laravel 12 inventory platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication, role-aware user management, a cream business UI, auditable stock movements, suppliers, categories, procurement/receiving, customers, sales orders, inventory alerts, reporting/valuation, returns/refunds, barcode support and a gateway-ready payment layer.
+Smart Inventory & Shopping Management
+
+A Laravel 12 inventory and shopping platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication for privileged accounts, controlled employee account management, customer self-registration, a cream business UI, auditable stock movements, suppliers, categories, procurement/receiving, customers, sales orders, inventory alerts, reporting/valuation, returns/refunds, barcode support and a gateway-ready payment layer.
 
 ## Functional scope completed before hardening
 
 - Laravel 12 / PHP 8.2+
-- Mandatory email OTP for inventory managers/administrators after password validation; ordinary staff use password authentication without OTP
+- Mandatory email OTP for inventory managers/administrators after password validation; staff and customers use password authentication without OTP
 - OTP hashing, expiry, one-time verification, attempt limits and resend cooldown
 - Authentication event logging
 - Product CRUD with SKU, barcode, category, cost/selling price, images, stock and reorder levels
@@ -21,11 +23,47 @@ A Laravel 12 inventory platform rebuilt from the reference Inventorysystem proje
 - Inventory alert centre with unread/read state
 - Management reporting and inventory valuation
 - Inventory value by category and stock movement summaries
-- Administrator, manager and staff roles
-- Administrator user management
+- Administrator, manager, staff and customer roles
+- Controlled employee account creation: administrators can create managers/staff; managers can create staff
+- Public registration is customer-only; public users cannot self-register as employees or administrators
+- Administrator user management and last-active-administrator protection
 - Cream, charcoal and bronze visual theme
-- PHPUnit feature coverage for core business rules
+- PHPUnit feature coverage for core business and security rules
 - GitHub Actions CI workflow
+
+## Account and role workflow
+
+UJUZI SHOP MALL separates public customers from organization employees.
+
+### Administrator
+
+- Provisioned by the first-install administrator seeder/environment configuration.
+- Has full platform and employee-account management access.
+- Uses password + email OTP at sign-in.
+- Can create managers and staff.
+- Can edit employee roles and status while preserving at least one active administrator.
+
+### Manager
+
+- Created by an administrator through Employee Accounts.
+- Uses password + email OTP at sign-in.
+- Can manage operational inventory, procurement, sales and staff accounts.
+- Can create and manage staff accounts, but cannot create or promote another manager.
+
+### Staff
+
+- Created by an administrator or manager through Employee Accounts.
+- Uses password authentication without OTP.
+- Does not have employee-account administration privileges.
+
+### Customer
+
+- Created through the public registration page.
+- Public signup always assigns the `customer` role.
+- Cannot self-register as an administrator, manager or staff member.
+- Uses password authentication without manager OTP.
+
+Employee account creation is currently controlled in the application by authorized administrators/managers. The employee receives their initial credentials through a secure channel. A future invitation-email flow can replace manual credential handoff without changing the role boundaries.
 
 ## Environment configuration
 
@@ -97,22 +135,6 @@ php artisan serve
 
 If you are using the XAMPP Apache/PHP stack instead of `php artisan serve`, point the web server at the Laravel application's `public` directory and keep the same `.env` database configuration.
 
-## Reporting and valuation
-
-Reports distinguish cost value, retail value and potential gross margin, and summarize low/out-of-stock products, sales, purchases, stock movements and valuation by category.
-
-## Returns and refunds
-
-Returns are tied to sales orders and order items. The system validates remaining returnable quantities, restores returned goods inside a transaction and records a `RETURN` stock movement. Refund status is explicit and is ready to be connected to the payment layer.
-
-## Barcode support
-
-Products have an optional unique barcode in addition to SKU. Product creation/editing accepts barcodes and inventory search matches product name, SKU or barcode. This provides the data layer required for USB/Bluetooth scanner workflows without tying the application to one hardware vendor.
-
-## Payment layer
-
-The application has a transaction-safe payment record and `PaymentService`. It records provider, method, reference, amount, status and payment time, prevents overpayment, serializes concurrent payment updates per order, and automatically updates an order from `unpaid` to `partial` or `paid`. The current provider is intentionally manual/gateway-ready; real provider credentials and webhook contracts belong in final deployment configuration rather than source code.
-
 ## Authentication flow
 
 ### Manager / administrator
@@ -121,24 +143,15 @@ The application has a transaction-safe payment record and `PaymentService`. It r
 2. Credentials and account status are validated.
 3. A six-digit OTP is generated and stored only as a hash.
 4. The OTP is emailed to the registered address.
-5. The authentication event is logged.
-6. The user must enter the OTP before Laravel authenticates the manager session.
+5. The user must enter the OTP before Laravel authenticates the privileged session.
 
-Manager login attempts are also rate-limited by email/IP.
+Manager login attempts are rate-limited by email/IP.
 
-### Ordinary staff
+### Staff / customer
 
 1. User submits email and password.
 2. Credentials and account status are validated.
 3. The user is authenticated directly without a manager OTP challenge.
-
-## Roles
-
-- **Administrator:** full platform and user-management access.
-- **Manager:** inventory, suppliers, categories, procurement and sales-management access.
-- **Staff:** authenticated platform access without management privileges by default.
-
-Administrator management also prevents the last active administrator from being removed and prevents an administrator from accidentally removing their own administrator access.
 
 ## Security hardening
 
@@ -149,6 +162,8 @@ Administrator management also prevents the last active administrator from being 
 - CSRF protection remains provided by Laravel's web middleware.
 - Real credentials remain outside Git via `.env` and `.gitignore`.
 - Payment updates use row locking to prevent concurrent overpayment races.
+- Public registration cannot create privileged employee accounts.
+- Employee creation is restricted by role: administrators may create managers/staff; managers may create staff.
 
 ## CI and automated verification
 
@@ -157,6 +172,18 @@ GitHub Actions uses SQLite independently of the local XAMPP/MySQL configuration.
 This separation is intentional: **CI validates the repository; your local XAMPP environment validates MySQL integration.**
 
 ## Implementation log
+
+### Phase — Identity and account-role hardening
+
+- Rebranded the application as **UJUZI SHOP MALL — Smart Inventory & Shopping Management**.
+- Added an explicit `customer` role alongside administrator, manager and staff roles.
+- Removed the unsafe first-registration administrator behavior.
+- Restricted public registration to customer accounts.
+- Added controlled Employee Accounts creation for authorized administrators/managers.
+- Administrators can create managers and staff; managers can create staff only.
+- Kept manager/administrator email OTP while staff/customers use password authentication.
+- Added role-aware employee management visibility and permissions.
+- Added automated coverage for customer registration and controlled employee creation.
 
 ### Phase — First-class categories
 
