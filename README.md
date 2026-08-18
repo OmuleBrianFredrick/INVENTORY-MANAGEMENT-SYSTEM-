@@ -2,7 +2,7 @@
 
 Smart Inventory & Shopping Management
 
-A Laravel 12 inventory and shopping platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication for privileged accounts, controlled employee account management, customer self-registration, a cream business UI, auditable stock movements, suppliers, categories, procurement/receiving, customers, sales orders, inventory alerts, reporting/valuation, returns/refunds, barcode support and a gateway-ready payment layer.
+A Laravel 12 inventory and shopping platform rebuilt from the reference Inventorysystem project and extended with mandatory email OTP authentication for privileged accounts, secure employee invitation onboarding, customer self-registration, a cream business UI, auditable stock movements, suppliers, categories, procurement/receiving, customers, sales orders, inventory alerts, reporting/valuation, returns/refunds, barcode support and a gateway-ready payment layer.
 
 ## Functional scope completed before hardening
 
@@ -24,11 +24,12 @@ A Laravel 12 inventory and shopping platform rebuilt from the reference Inventor
 - Management reporting and inventory valuation
 - Inventory value by category and stock movement summaries
 - Administrator, manager, staff and customer roles
-- Controlled employee account creation: administrators can create managers/staff; managers can create staff
+- Secure employee invitation onboarding: administrators can invite managers/staff; managers can invite staff
+- Employee invitation links are single-use, hashed, time-limited and activate the employee only after they create their own password
 - Public registration is customer-only; public users cannot self-register as employees or administrators
 - Administrator user management and last-active-administrator protection
 - Cream, charcoal and bronze visual theme
-- PHPUnit feature coverage for core business and security rules
+- PHPUnit feature coverage for core business, onboarding and security rules
 - GitHub Actions CI workflow
 
 ## Account and role workflow
@@ -40,19 +41,19 @@ UJUZI SHOP MALL separates public customers from organization employees.
 - Provisioned by the first-install administrator seeder/environment configuration.
 - Has full platform and employee-account management access.
 - Uses password + email OTP at sign-in.
-- Can create managers and staff.
+- Can invite managers and staff.
 - Can edit employee roles and status while preserving at least one active administrator.
 
 ### Manager
 
-- Created by an administrator through Employee Accounts.
+- Invited by an administrator through Employee Accounts.
 - Uses password + email OTP at sign-in.
 - Can manage operational inventory, procurement, sales and staff accounts.
-- Can create and manage staff accounts, but cannot create or promote another manager.
+- Can invite staff, but cannot invite or promote another manager.
 
 ### Staff
 
-- Created by an administrator or manager through Employee Accounts.
+- Invited by an administrator or manager through Employee Accounts.
 - Uses password authentication without OTP.
 - Does not have employee-account administration privileges.
 
@@ -63,7 +64,22 @@ UJUZI SHOP MALL separates public customers from organization employees.
 - Cannot self-register as an administrator, manager or staff member.
 - Uses password authentication without manager OTP.
 
-Employee account creation is currently controlled in the application by authorized administrators/managers. The employee receives their initial credentials through a secure channel. A future invitation-email flow can replace manual credential handoff without changing the role boundaries.
+## Employee invitation workflow
+
+Employee onboarding is controlled by authorized administrators/managers and no longer uses administrator-supplied passwords.
+
+1. An administrator or manager opens Employee Accounts.
+2. They enter the employee's name, company email and permitted role.
+3. UJUZI SHOP MALL creates an inactive employee record with a random unusable password.
+4. The system generates a random single-use invitation token and stores only its SHA-256 hash.
+5. The employee receives an email containing a secure invitation link.
+6. The invitation expires after 24 hours.
+7. The employee opens the link and creates their own password.
+8. The system activates the account, marks the invitation as accepted and records email verification time.
+9. The employee can then sign in normally; managers receive the additional email OTP challenge.
+10. Authorized managers can resend an unused staff invitation; administrators can resend unused manager/staff invitations.
+
+Expired, revoked or already accepted invitations cannot be used again.
 
 ## Environment configuration
 
@@ -71,7 +87,7 @@ The repository contains a complete **`.env.example` template**. It includes:
 
 - XAMPP/MySQL connection placeholders
 - local application settings
-- mock SMTP configuration for OTP email
+- mock SMTP configuration for OTP and invitation email
 - OTP security settings
 - first-install administrator placeholders
 - mock payment/SMS integration placeholders
@@ -95,7 +111,7 @@ Adjust `DB_USERNAME` and `DB_PASSWORD` if your XAMPP/MySQL installation uses dif
 
 ### Example SMTP configuration
 
-`.env.example` contains deliberately fake SMTP values such as `smtp.example.com`. These are **configuration placeholders, not working credentials**. Replace them locally with your SMTP provider's host, port, username, password and encryption settings before testing real OTP delivery.
+`.env.example` contains deliberately fake SMTP values such as `smtp.example.com`. These are **configuration placeholders, not working credentials**. Replace them locally with your SMTP provider's host, port, username, password and encryption settings before testing real OTP and invitation delivery.
 
 For a development environment where you do not want to configure SMTP yet, use:
 
@@ -163,7 +179,7 @@ Manager login attempts are rate-limited by email/IP.
 - Real credentials remain outside Git via `.env` and `.gitignore`.
 - Payment updates use row locking to prevent concurrent overpayment races.
 - Public registration cannot create privileged employee accounts.
-- Employee creation is restricted by role: administrators may create managers/staff; managers may create staff.
+- Employee invitations are restricted by role and use hashed, expiring, single-use tokens.
 
 ## CI and automated verification
 
@@ -179,11 +195,14 @@ This separation is intentional: **CI validates the repository; your local XAMPP 
 - Added an explicit `customer` role alongside administrator, manager and staff roles.
 - Removed the unsafe first-registration administrator behavior.
 - Restricted public registration to customer accounts.
-- Added controlled Employee Accounts creation for authorized administrators/managers.
-- Administrators can create managers and staff; managers can create staff only.
+- Replaced manual employee password creation with controlled employee invitation onboarding.
+- Administrators can invite managers and staff; managers can invite staff only.
+- Added single-use, SHA-256-hashed, 24-hour invitation tokens.
+- Added employee password creation and activation through the invitation link.
+- Added invitation resend support for authorized pending employees.
 - Kept manager/administrator email OTP while staff/customers use password authentication.
 - Added role-aware employee management visibility and permissions.
-- Added automated coverage for customer registration and controlled employee creation.
+- Added automated coverage for customer registration and employee invitation lifecycle.
 
 ### Phase — First-class categories
 
