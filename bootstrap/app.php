@@ -18,7 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Feature tests submit POST requests directly without a browser-issued
         // CSRF token. Keep CSRF protection enabled for real requests, while
         // allowing the testing environment to exercise controller behaviour.
-        if (getenv('APP_ENV') === 'testing') {
+        if (app()->environment('testing')) {
             $middleware->validateCsrfTokens(except: ['*']);
         }
 
