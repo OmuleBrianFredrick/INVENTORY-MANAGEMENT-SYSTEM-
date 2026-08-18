@@ -21,7 +21,11 @@
                     @if(auth()->user()->isAdmin() || $user->role === 'staff')
                         <form method="POST" action="{{ route('users.resend-invitation',$user->id) }}" style="display:inline">
                             @csrf
-                            <button class="table-link" type="submit">Resend invitation</button>
+                            <button class="table-link" type="submit">Resend</button>
+                        </form>
+                        <form method="POST" action="{{ route('users.revoke-invitation',$user->id) }}" style="display:inline">
+                            @csrf
+                            <button class="table-link" type="submit">Revoke</button>
                         </form>
                     @endif
                 @else
