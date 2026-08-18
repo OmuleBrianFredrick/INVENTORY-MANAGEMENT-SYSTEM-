@@ -135,6 +135,37 @@ class EmployeeInvitationTest extends TestCase
         $this->assertFalse($employee->fresh()->is_active);
     }
 
+    public function test_admin_can_revoke_a_pending_invitation(): void
+    {
+        $admin = User::create([
+            'name' => 'Administrator',
+            'email' => 'admin@example.test',
+            'password' => Hash::make('password123'),
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
+        $employee = User::create([
+            'name' => 'Pending Staff',
+            'email' => 'pending@example.test',
+            'password' => Hash::make(Str::random(40)),
+            'role' => 'staff',
+            'is_active' => false,
+        ]);
+        $token = Str::random(64);
+        $invitation = EmployeeInvitation::create([
+            'user_id' => $employee->id,
+            'invited_by' => $admin->id,
+            'token_hash' => hash('sha256', $token),
+            'expires_at' => now()->addDay(),
+        ]);
+
+        $response = $this->actingAs($admin)->post(route('users.revoke-invitation', $employee->id));
+
+        $response->assertRedirect(route('users.index'));
+        $this->assertNotNull($invitation->fresh()->revoked_at);
+        $this->get(route('employee-invitation.show', $token))->assertStatus(410);
+    }
+
     public function test_public_registration_remains_customer_only(): void
     {
         $response = $this->post(route('register.post'), [
