@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>@yield('title','Inventory Management System')</title>
+    <title>@yield('title','UJUZI SHOP MALL')</title>
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('css/actions.css') }}">
 </head>
@@ -16,8 +16,8 @@
         <main class="main">
             <header class="topbar">
                 <div>
-                    <span class="eyebrow">ADVANCED INVENTORY</span>
-                    <strong>@yield('page_title','Inventory Management')</strong>
+                    <span class="eyebrow">UJUZI SHOP MALL</span>
+                    <strong>@yield('page_title','Smart Inventory & Shopping Management')</strong>
                 </div>
 
                 @auth
