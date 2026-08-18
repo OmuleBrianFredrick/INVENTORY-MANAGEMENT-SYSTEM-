@@ -45,8 +45,8 @@ class AuthController extends Controller
         $code=(string)random_int(100000,999999);
         $challenge=OtpChallenge::create(['user_id'=>$user->id,'code_hash'=>Hash::make($code),'expires_at'=>now()->addMinutes((int)env('OTP_EXPIRY_MINUTES',5)),'last_sent_at'=>now(),'ip_address'=>$request->ip()]);
         $request->session()->put('otp_challenge_id',$challenge->id);
+        // OTP is delivered by email only. Never write the OTP code or an OTP-sent event to authentication logs.
         Mail::to($user->email)->send(new LoginOtpMail($code,$user->name,(int)env('OTP_EXPIRY_MINUTES',5)));
-        AuthenticationLog::create(['user_id'=>$user->id,'email'=>$user->email,'event'=>'OTP_SENT','status'=>'SUCCESS','ip_address'=>$request->ip(),'user_agent'=>$request->userAgent(),'details'=>'Manager login OTP sent']);
         return redirect()->route('otp.form');
     }
 
@@ -81,8 +81,8 @@ class AuthController extends Controller
         if($challenge->last_sent_at&&$challenge->last_sent_at->addSeconds((int)env('OTP_RESEND_SECONDS',60))->isFuture())return back()->withErrors(['otp'=>'Please wait before requesting another code.']);
         $code=(string)random_int(100000,999999);
         $challenge->update(['code_hash'=>Hash::make($code),'expires_at'=>now()->addMinutes((int)env('OTP_EXPIRY_MINUTES',5)),'attempts'=>0,'last_sent_at'=>now(),'verified_at'=>null]);
+        // Replacement OTP is delivered by email only. Do not record the OTP itself or an OTP-resend event in logs.
         Mail::to($challenge->user->email)->send(new LoginOtpMail($code,$challenge->user->name,(int)env('OTP_EXPIRY_MINUTES',5)));
-        AuthenticationLog::create(['user_id'=>$challenge->user_id,'email'=>$challenge->user->email,'event'=>'OTP_RESENT','status'=>'SUCCESS','ip_address'=>$request->ip(),'user_agent'=>$request->userAgent(),'details'=>'Replacement manager login OTP sent']);
         return back()->with('success','A new verification code has been sent.');
     }
 
