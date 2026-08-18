@@ -14,6 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: []);
+
+        // Feature tests submit POST requests directly without a browser-issued
+        // CSRF token. Keep CSRF protection enabled for real requests, while
+        // allowing the testing environment to exercise controller behaviour.
+        if (getenv('APP_ENV') === 'testing') {
+            $middleware->validateCsrfTokens(except: ['*']);
+        }
+
         $middleware->append(SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {})
