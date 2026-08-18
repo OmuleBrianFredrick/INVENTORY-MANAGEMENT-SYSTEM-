@@ -18,9 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Feature tests submit POST requests directly without a browser-issued
         // CSRF token. Keep CSRF protection enabled for real requests, while
         // allowing the testing environment to exercise controller behaviour.
-        // Read the PHPUnit environment directly here because the application
-        // container is still being bootstrapped when this callback executes.
-        if (($_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? null) === 'testing') {
+        // PHPUnit exposes <env> values through getenv() during bootstrap.
+        if (getenv('APP_ENV') === 'testing') {
             $middleware->validateCsrfTokens(except: ['*']);
         }
 
