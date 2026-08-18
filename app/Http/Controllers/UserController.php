@@ -22,9 +22,7 @@ class UserController extends Controller
     public function index(Request $r)
     {
         $this->manager($r);
-        $users = $r->user()->isAdmin()
-            ? User::latest()->get()
-            : User::where('role', 'staff')->latest()->get();
+        $users = $r->user()->isAdmin() ? User::latest()->get() : User::where('role', 'staff')->latest()->get();
         return view('users.index', compact('users'));
     }
 
@@ -39,20 +37,9 @@ class UserController extends Controller
     {
         $this->manager($r);
         $allowedRoles = $r->user()->isAdmin() ? ['manager', 'staff'] : ['staff'];
-        $data = $r->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
-            'role' => 'required|in:'.implode(',', $allowedRoles),
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+        $data = $r->validate(['name'=>'required|string|max:255','email'=>'required|email|max:255|unique:users,email','role'=>'required|in:'.implode(',', $allowedRoles),'password'=>'required|string|min:8|confirmed']);
         $data['email'] = strtolower(trim($data['email']));
-        User::create([
-            'name' => $data['name'],
-            'email' => $data['email'],
-            'password' => Hash::make($data['password']),
-            'role' => $data['role'],
-            'is_active' => true,
-        ]);
+        User::create(['name'=>$data['name'],'email'=>$data['email'],'password'=>Hash::make($data['password']),'role'=>$data['role'],'is_active'=>true]);
         return redirect()->route('users.index')->with('success', ucfirst($data['role']).' account created successfully. Provide the employee with their sign-in credentials securely.');
     }
 
@@ -61,7 +48,8 @@ class UserController extends Controller
         $this->manager($r);
         $user = User::findOrFail($id);
         abort_unless($this->canManageUser($r->user(), $user), 403);
-        return view('users.edit', compact('user'));
+        $roles = $r->user()->isAdmin() ? ['admin','manager','staff'] : ['staff'];
+        return view('users.edit', compact('user','roles'));
     }
 
     public function update(Request $r, $id)
