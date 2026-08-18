@@ -44,6 +44,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/users/create', [EmployeeInvitationController::class, 'create'])->name('users.create');
     Route::post('/users', [EmployeeInvitationController::class, 'store'])->name('users.store');
     Route::post('/users/{id}/resend-invitation', [EmployeeInvitationController::class, 'resend'])->name('users.resend-invitation');
+    Route::post('/users/{id}/revoke-invitation', [EmployeeInvitationController::class, 'revoke'])->name('users.revoke-invitation');
     Route::get('/users/{id}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/users/{id}', [UserController::class, 'update'])->name('users.update');
     Route::get('/security-logs', [SecurityLogController::class, 'index'])->name('security.logs');
