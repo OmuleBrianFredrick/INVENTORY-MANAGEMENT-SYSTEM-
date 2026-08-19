@@ -38,8 +38,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/employee-invitations/{token}', [EmployeeInvitationController::class, 'accept'])->name('employee-invitation.accept');
 });
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/checkout', fn () => abort_unless(auth()->user()->isCustomer(), 403) ?: view('checkout.index'))->name('checkout');
+Route::middleware('auth')->group(function () {
+    Route::get('/checkout', function () { abort_unless(auth()->user()->isCustomer(), 403); return view('checkout.index'); })->name('checkout');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
@@ -85,7 +85,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/orders/{order}/payments', [PaymentController::class, 'store'])->name('orders.payments');
     Route::get('/alerts', [AlertController::class, 'index'])->name('alerts.index');
     Route::post('/alerts/read-all', [AlertController::class, 'readAll'])->name('alerts.readAll');
-    Route::post('/alerts/{alert}/read', [AlertController::class, 'read'])->name('alerts.readAll');
     Route::post('/alerts/{alert}/read', [AlertController::class, 'read'])->name('alerts.read');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/returns', [ReturnController::class, 'index'])->name('returns.index');
