@@ -45,12 +45,12 @@ class AuthenticationOtpTest extends TestCase
         Mail::assertNothingSent();
     }
 
-    public function test_customer_password_logs_in_without_otp(): void
+    public function test_customer_password_logs_in_without_otp_and_returns_to_storefront(): void
     {
         $user=User::create(['name'=>'Customer','email'=>'customer@example.com','password'=>Hash::make('password123'),'role'=>'customer','is_active'=>true]);
         Mail::fake();
         $response=$this->postLogin(['email'=>$user->email,'password'=>'password123']);
-        $response->assertRedirect('/products');
+        $response->assertRedirect('/');
         $this->assertAuthenticatedAs($user);
         $this->assertDatabaseCount('otp_challenges',0);
         Mail::assertNothingSent();
