@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmployeeInvitationController;
+use App\Http\Controllers\MarketplaceController;
+use App\Http\Controllers\CartController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SecurityLogController;
@@ -16,7 +18,13 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\PaymentController;
 
-Route::get('/', fn () => redirect()->route('products.index'));
+Route::get('/', [MarketplaceController::class, 'home'])->name('marketplace.home');
+Route::get('/shop/products/{product}', [MarketplaceController::class, 'show'])->name('marketplace.product');
+
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart/{product}', [CartController::class, 'add'])->name('cart.add');
+Route::post('/cart', [CartController::class, 'update'])->name('cart.update');
+Route::post('/cart/{product}/remove', [CartController::class, 'remove'])->name('cart.remove');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -30,7 +38,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/employee-invitations/{token}', [EmployeeInvitationController::class, 'accept'])->name('employee-invitation.accept');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth'])->group(function () {
+    Route::get('/checkout', fn () => abort_unless(auth()->user()->isCustomer(), 403) ?: view('checkout.index'))->name('checkout');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
@@ -76,6 +85,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/orders/{order}/payments', [PaymentController::class, 'store'])->name('orders.payments');
     Route::get('/alerts', [AlertController::class, 'index'])->name('alerts.index');
     Route::post('/alerts/read-all', [AlertController::class, 'readAll'])->name('alerts.readAll');
+    Route::post('/alerts/{alert}/read', [AlertController::class, 'read'])->name('alerts.readAll');
     Route::post('/alerts/{alert}/read', [AlertController::class, 'read'])->name('alerts.read');
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/returns', [ReturnController::class, 'index'])->name('returns.index');
