@@ -21,7 +21,9 @@ class CustomerCheckoutController extends Controller
     {
         $this->customer($request);
         $cart = $request->session()->get('shop_cart', []);
-        abort_if(empty($cart), 302, 'Your cart is empty.');
+        if (empty($cart)) {
+            return redirect()->route('cart.index')->withErrors(['cart' => 'Your cart is empty.']);
+        }
         $products = Products::whereIn('id', array_keys($cart))->get()->keyBy('id');
         $items = [];
         $total = 0;
