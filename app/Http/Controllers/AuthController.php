@@ -34,12 +34,14 @@ class AuthController extends Controller
         RateLimiter::clear($key);
         if(!$user->is_active)return back()->withErrors(['email'=>'This account is inactive. Contact an administrator.'])->onlyInput('email');
 
-        // OTP is restricted to privileged inventory managers/admins. Staff and customers use password login.
+        // OTP remains restricted to privileged inventory managers/admins. Staff and customers use password login.
         if(!$user->isManager()){
             Auth::login($user);
             $request->session()->regenerate();
             AuthenticationLog::create(['user_id'=>$user->id,'email'=>$user->email,'event'=>'LOGIN','status'=>'SUCCESS','ip_address'=>$request->ip(),'user_agent'=>$request->userAgent(),'details'=>'Password login completed without manager OTP requirement']);
-            return redirect()->intended(route('products.index'));
+            return $user->isCustomer()
+                ? redirect()->intended(route('marketplace.home'))
+                : redirect()->intended(route('products.index'));
         }
 
         $code=(string)random_int(100000,999999);
@@ -90,8 +92,8 @@ class AuthController extends Controller
     {
         $request->validate(['name'=>['required','string','max:255'],'email'=>['required','email','max:255','unique:users,email'],'password'=>['required','string','min:8','confirmed']]);
         User::create(['name'=>$request->name,'email'=>strtolower(trim($request->email)),'password'=>Hash::make($request->password),'role'=>'customer','is_active'=>true]);
-        return redirect()->route('login')->with('success','Customer account created. Sign in to continue.');
+        return redirect()->route('login')->with('success','Customer account created. Your cart is still saved; sign in to continue.');
     }
 
-    public function logout(Request $request){$user=Auth::user();if($user)AuthenticationLog::create(['user_id'=>$user->id,'email'=>$user->email,'event'=>'LOGOUT','status'=>'SUCCESS','ip_address'=>$request->ip(),'user_agent'=>$request->userAgent(),'details'=>'User logged out']);Auth::logout();$request->session()->invalidate();$request->session()->regenerateToken();return redirect()->route('login');}
+    public function logout(Request $request){$user=Auth::user();if($user)AuthenticationLog::create(['user_id'=>$user->id,'email'=>$user->email,'event'=>'LOGOUT','status'=>'SUCCESS','ip_address'=>$request->ip(),'user_agent'=>$request->userAgent(),'details'=>'User logged out']);Auth::logout();$request->session()->invalidate();$request->session()->regenerateToken();return redirect()->route('marketplace.home');}
 }
