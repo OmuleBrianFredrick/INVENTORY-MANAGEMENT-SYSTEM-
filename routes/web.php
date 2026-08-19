@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmployeeInvitationController;
 use App\Http\Controllers\MarketplaceController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\CustomerCheckoutController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SecurityLogController;
@@ -39,7 +40,9 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('/checkout', function () { abort_unless(auth()->user()->isCustomer(), 403); return view('checkout.index'); })->name('checkout');
+    Route::get('/checkout', [CustomerCheckoutController::class, 'create'])->name('checkout');
+    Route::post('/checkout', [CustomerCheckoutController::class, 'store'])->name('checkout.store');
+    Route::get('/checkout/{order}/confirmation', [CustomerCheckoutController::class, 'confirmation'])->name('checkout.confirmation');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
